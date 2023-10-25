@@ -1,0 +1,10 @@
+{
+  "version": 2,
+  "dgSpecHash": "vpP+HJ6qC4n6E9eh8NzNWan0lIra46cvakriFfwggoVWSk8po8zjeCnwy1pUoBfxAPwYBnUtM41/60UZ2nCJew==",
+  "success": true,
+  "projectFilePath": "C:\\Users\\simon\\OneDrive\\Desktop\\WinFormsApp1\\WinFormsApp1\\WinFormsApp1.csproj",
+  "expectedPackageFiles": [
+    "C:\\Users\\simon\\.nuget\\packages\\winforms.datavisualization\\1.9.0\\winforms.datavisualization.1.9.0.nupkg.sha512"
+  ],
+  "logs": []
+}
