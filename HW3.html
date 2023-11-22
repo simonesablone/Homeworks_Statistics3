@@ -1,0 +1,228 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.7.0/chart.min.js"></script>
+    <style>
+        .chart-container {
+            display: flex;
+            margin-bottom: 20px;
+        }
+
+        canvas {
+            border: 1px solid #000;
+            display: block;
+        }
+
+        .resizable-frame {
+            position: relative;
+            overflow: hidden;
+            margin-right: 10px;
+        }
+
+        .resizable-rectangle {
+            position: absolute;
+            width: 10px;
+            height: 10px;
+            background-color: #4285f4;
+            border: 1px solid #000;
+            cursor: nwse-resize;
+        }
+    </style>
+    <title>Attack Simulation</title>
+</head>
+<body>
+    <div class="chart-container">
+        <!-- Part A - Trajectories and Histogram -->
+        <div class="resizable-frame" style="flex: 1;">
+            <h3>Part A - Security Score Trajectories and Histogram</h3>
+            <label for="inputSystemsA"># Systems:</label>
+            <input id="inputSystemsA" type="number" value="10" min="1" max="100">
+            <label for="inputAttacksA"># Attacks:</label>
+            <input id="inputAttacksA" type="number" value="100" min="1" max="1000">
+            <button id="simulateA" type="button">Simulate Attacks (Part A)</button>
+
+            <canvas id="chartCanvasA" width="400" height="300"></canvas>
+            <div class="resizable-rectangle" id="resizableA"></div>
+        </div>
+
+        <!-- Part B - Trajectories and Histogram -->
+        <div class="resizable-frame" style="flex: 1;">
+            <h3>Part B - Cumulated Frequency Trajectories and Histogram</h3>
+            <label for="inputSystemsB"># Systems:</label>
+            <input id="inputSystemsB" type="number" value="10" min="1" max="100">
+            <label for="inputAttacksB"># Attacks:</label>
+            <input id="inputAttacksB" type="number" value="100" min="1" max="1000">
+            <button id="simulateB" type="button">Simulate Attacks (Part B)</button>
+
+            <canvas id="chartCanvasB" width="400" height="300"></canvas>
+            <div class="resizable-rectangle" id="resizableB"></div>
+        </div>
+    </div>
+
+    <script>
+        document.getElementById("simulateA").onclick = simulatePartA;
+        document.getElementById("simulateB").onclick = simulatePartB;
+
+        function simulatePartA() {
+            const numSystems = parseInt(document.getElementById("inputSystemsA").value, 10);
+            const numAttacks = parseInt(document.getElementById("inputAttacksA").value, 10);
+            const penetrationProbability = 0.5;
+
+            simulateAttacks('chartCanvasA', 'resizableA', numSystems, numAttacks, penetrationProbability, 'Security Scores');
+        }
+
+        function simulatePartB() {
+            const numSystems = parseInt(document.getElementById("inputSystemsB").value, 10);
+            const numAttacks = parseInt(document.getElementById("inputAttacksB").value, 10);
+            const penetrationProbability = 0.5;
+
+            simulateAttacks('chartCanvasB', 'resizableB', numSystems, numAttacks, penetrationProbability, 'Cumulated Frequency');
+            simulateAttacks('chartCanvasB', 'resizableB', numSystems, numAttacks, penetrationProbability, 'Relative Frequency');
+            simulateAttacks('chartCanvasB', 'resizableB', numSystems, numAttacks, penetrationProbability, 'Normalized Ratio');
+        }
+
+        function simulateAttacks(canvasId, resizableId, numSystems, numAttacks, penetrationProbability, label) {
+            const ctx = document.getElementById(canvasId).getContext("2d");
+            const chart = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: Array.from({ length: numAttacks }, (_, i) => i + 1),
+                    datasets: []
+                },
+                options: {
+                    scales: {
+                        x: {
+                            type: 'linear',
+                            position: 'bottom',
+                            title: {
+                                display: true,
+                                text: 'Number of Attacks',
+                            },
+                            grid: {
+                                color: 'rgba(0, 0, 0, 0.1)'
+                            }
+                        },
+                        y: {
+                            type: 'linear',
+                            position: 'left',
+                            title: {
+                                display: true,
+                                text: 'Security Score / Frequency',
+                            },
+                            grid: {
+                                color: 'rgba(0, 0, 0, 0.1)'
+                            }
+                        },
+                        secondary: {
+                            type: 'linear',
+                            position: 'right',
+                            title: {
+                                display: true,
+                                text: 'Histogram',
+                            },
+                            grid: {
+                                color: 'rgba(0, 0, 0, 0.1)'
+                            }
+                        }
+                    }
+                }
+            });
+
+            const resizable = document.getElementById(resizableId);
+            resizable.style.width = `${chart.canvas.width}px`;
+            resizable.style.height = `${chart.canvas.height}px`;
+            resizable.style.left = 'calc(100% - 10px)';
+            resizable.style.top = 'calc(100% - 10px)';
+            resizable.addEventListener('mousedown', (event) => startResizing(event, resizable, chart, ctx));
+
+            const distributionColors = {};
+
+            for (let system = 1; system <= numSystems; system++) {
+                const data = simulateSecurityScores(numAttacks, penetrationProbability);
+                const distributionKey = JSON.stringify(data);
+
+                if (!(distributionKey in distributionColors)) {
+                    distributionColors[distributionKey] = getRandomColor();
+                }
+
+                chart.data.datasets.push({
+                    label: `${label} - System ${system}`,
+                    data: data,
+                    borderColor: distributionColors[distributionKey],
+                    borderWidth: 1,
+                    fill: false
+                });
+
+                const histogramData = generateHistogramData(data);
+                chart.data.datasets.push({
+                    label: `Histogram - System ${system}`,
+                    data: histogramData,
+                    type: 'bar',
+                    borderColor: 'rgba(0,0,0,0)',
+                    backgroundColor: 'rgba(0,0,0,1)',
+                    barPercentage: 1.0,
+                    categoryPercentage: 1.0,
+                    xAxisID: 'x',
+                    yAxisID: 'secondary'
+                });
+            }
+
+            chart.update();
+        }
+
+        function simulateSecurityScores(numAttacks, penetrationProbability) {
+            const scores = [];
+            let score = 0;
+
+            for (let attack = 1; attack <= numAttacks; attack++) {
+                score += Math.random() < penetrationProbability ? -1 : 1;
+                scores.push(score);
+            }
+
+            return scores;
+        }
+
+        function generateHistogramData(data) {
+            const histogramData = Array.from({ length: data.length }, () => 0);
+
+            for (const value of data) {
+                const index = Math.floor(value);
+                histogramData[index]++;
+            }
+
+            return histogramData;
+        }
+
+        function getRandomColor() {
+            const letters = '0123456789ABCDEF';
+            let color = '#';
+            for (let i = 0; i < 6; i++) {
+                color += letters[Math.floor(Math.random() * 16)];
+            }
+            return color;
+        }
+
+        function startResizing(e, resizable, chart, ctx) {
+            window.addEventListener('mousemove', (event) => resize(event, resizable, chart, ctx));
+            window.addEventListener('mouseup', () => stopResizing(resizable));
+        }
+
+        function resize(e, resizable, chart, ctx) {
+            resizable.style.width = `${e.clientX - resizable.getBoundingClientRect().left}px`;
+            resizable.style.height = `${e.clientY - resizable.getBoundingClientRect().top}px`;
+            chart.resize();
+            chart.update();
+        }
+
+        function stopResizing(resizable) {
+            window.removeEventListener('mousemove', resize);
+            window.removeEventListener('mouseup', stopResizing);
+        }
+    </script>
+</body>
+</html>
+
+
+
+
